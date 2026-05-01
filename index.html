@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Global Wellbeing Map</title>
+
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root { --ink:#172033; --muted:#687086; --panel:#ffffffee; --line:#e7eaf0; --shadow:0 18px 55px rgba(18,31,56,.16); }
+
+* { box-sizing: border-box; }
+
+body {
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color:var(--ink);
+  background:#eef2f7;
+}
+
+#map {
+  width:100vw;
+  height:100vh;
+  background:#dfe8f2;
+}
+
+.brand {
+  position:absolute;
+  z-index:999;
+  top:18px;
+  left:18px;
+  width:310px;
+  padding:16px 18px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:var(--panel);
+  box-shadow:var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.eyebrow {
+  font-size:9px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:#596276;
+  font-weight:800;
+}
+
+h1 {
+  margin:6px 0 5px;
+  font-size:22px;
+  line-height:1.05;
+  letter-spacing:-.04em;
+}
+
+.subtitle {
+  margin:0 0 12px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+
+.controls {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+
+select {
+  width:100%;
+  border:1px solid #d9deea;
+  background:white;
+  border-radius:12px;
+  padding:9px 10px;
+  font-size:12px;
+  font-weight:700;
+  color:#1d2740;
+  outline:none;
+}
+
+.stats {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:6px;
+  margin-top:10px;
+}
+
+.stat {
+  background:#f7f9fc;
+  border:1px solid #e8ecf4;
+  border-radius:13px;
+  padding:8px;
+}
+
+.stat b {
+  display:block;
+  font-size:15px;
+  letter-spacing:-.03em;
+}
+
+.stat span {
+  display:block;
+  margin-top:2px;
+  font-size:9px;
+  color:var(--muted);
+  font-weight:700;
+}
+
+.rank {
+  position:absolute;
+  z-index:999;
+  right:18px;
+  top:18px;
+  width:200px;
+  max-height:calc(100vh - 36px);
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:var(--panel);
+  box-shadow:var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.rank header {
+  padding:12px 13px 9px;
+  border-bottom:1px solid var(--line);
+}
+
+.rank h2 {
+  margin:0;
+  font-size:14px;
+  letter-spacing:-.03em;
+}
+
+.rank p {
+  margin:3px 0 0;
+  color:var(--muted);
+  font-size:9px;
+}
+
+#rankList {
+  padding:5px 6px 9px;
+  max-height:calc(100vh - 105px);
+  overflow:auto;
+}
+
+.item {
+  display:grid;
+  grid-template-columns:20px 1fr auto;
+  gap:5px;
+  align-items:center;
+  padding:5px 6px;
+  border-radius:10px;
+}
+
+.item:hover {
+  background:#f2f5fa;
+}
+
+.num {
+  width:18px;
+  height:18px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#172033;
+  color:#fff;
+  font-size:9px;
+  font-weight:800;
+}
+
+.country {
+  font-weight:800;
+  font-size:11px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  font-size:10px;
+  font-weight:800;
+}
+
+.legend {
+  position:absolute;
+  z-index:999;
+  left:18px;
+  bottom:18px;
+  width:310px;
+  padding:12px 14px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  box-shadow:var(--shadow);
+}
+
+.legend-title {
+  font-size:11px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+
+.swatches {
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  overflow:hidden;
+  border-radius:999px;
+  height:10px;
+}
+
+.swatches div {
+  height:10px;
+}
+
+.scale {
+  display:flex;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:700;
+  margin-top:6px;
+}
+
+.leaflet-container {
+  font: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius:18px;
+  box-shadow:0 18px 55px rgba(17,28,48,.22);
+}
+
+.popup-title {
+  font-size:16px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+
+.popup-grid {
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:5px 14px;
+  min-width:210px;
+}
+
+.popup-grid span:nth-child(odd) {
+  color:#687086;
+}
+
+.popup-grid span:nth-child(even) {
+  font-weight:900;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width:900px) {
+  .brand,
+  .legend,
+  .rank {
+    position:relative;
+    inset:auto;
+    width:auto;
+    margin:12px;
+  }
+
+  #map {
+    height:70vh;
+  }
+
+  body {
+    overflow:auto;
+  }
+}
+</style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<section class="brand">
+  <div class="eyebrow">Country-level wellbeing dashboard</div>
+  <h1>Global Wellbeing Map</h1>
+  <p class="subtitle">Click on countries for full details.</p>
+
+  <div class="controls">
+    <select id="metricSelect"></select>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="coverage">—</b><span>Countries</span></div>
+    <div class="stat"><b id="avg">—</b><span>Average</span></div>
+    <div class="stat"><b id="top">—</b><span>Top value</span></div>
+  </div>
+</section>
+
+<section class="rank">
+  <header>
+    <h2>Top countries</h2>
+    <p id="rankSubtitle">Ranked by selected metric</p>
+  </header>
+  <div id="rankList"></div>
+</section>
+
+<section class="legend">
+  <div class="legend-title" id="legendTitle">Legend</div>
+  <div class="swatches" id="swatches"></div>
+  <div class="scale">
+    <span id="minLabel">Low</span>
+    <span id="maxLabel">High</span>
+  </div>
+</section>
+
+<script>
+const DATA = {"Finland": {"Country": "Finland", "Happiness_Score": 7.764, "Democracy_Score": 9.3, "gdp_per_capita_ppp": 63414.9936878177, "life_expectancy": 81.5853658536585, "unemployment_rate": 7.149, "homicide_rate": 0.98193498501344, "perceived_safety": 73.5, "lgbt_equality_index": 76.0, "gender_equality_index": 0.97}, "Iceland": {"Country": "Iceland", "Happiness_Score": 7.54, "Democracy_Score": 9.38, "gdp_per_capita_ppp": 81608.4479116436, "life_expectancy": 82.4560975609756, "unemployment_rate": 3.518, "homicide_rate": 1.29013114183057, "perceived_safety": 74.5, "lgbt_equality_index": 93.0, "gender_equality_index": 0.96}, "Denmark": {"Country": "Denmark", "Happiness_Score": 7.539, "Democracy_Score": 9.28, "gdp_per_capita_ppp": 77892.2932609904, "life_expectancy": 81.7536585365854, "unemployment_rate": 5.094, "homicide_rate": 0.840599404536194, "perceived_safety": 73.8, "lgbt_equality_index": 82.0, "gender_equality_index": 0.99}, "Costa Rica": {"Country": "Costa Rica", "Happiness_Score": 7.439, "Democracy_Score": 8.29, "gdp_per_capita_ppp": 28908.7688743191, "life_expectancy": 80.799, "unemployment_rate": 8.325, "homicide_rate": 17.7454798727379, "perceived_safety": 46.1, "lgbt_equality_index": 69.0, "gender_equality_index": 0.77}, "Sweden": {"Country": "Sweden", "Happiness_Score": 7.255, "Democracy_Score": 9.39, "gdp_per_capita_ppp": 69226.3272756663, "life_expectancy": 83.309756097561, "unemployment_rate": 7.611, "homicide_rate": 1.14675703743944, "perceived_safety": 52.1, "lgbt_equality_index": 75.0, "gender_equality_index": 0.98}, "Norway": {"Country": "Norway", "Happiness_Score": 7.242, "Democracy_Score": 9.81, "gdp_per_capita_ppp": 103637.516843678, "life_expectancy": 83.0121951219512, "unemployment_rate": 3.574, "homicide_rate": 0.724747049690651, "perceived_safety": 66.7, "lgbt_equality_index": 88.0, "gender_equality_index": 0.99}, "Netherlands": {"Country": "Netherlands", "Happiness_Score": 7.223, "Democracy_Score": 9.0, "gdp_per_capita_ppp": 81728.6904629268, "life_expectancy": 81.8634146341464, "unemployment_rate": 3.535, "homicide_rate": 0.690893081283378, "perceived_safety": 74.5, "lgbt_equality_index": 76.0, "gender_equality_index": 0.97}, "Israel": {"Country": "Israel", "Happiness_Score": 7.187, "Democracy_Score": 7.8, "gdp_per_capita_ppp": 55171.2318814321, "life_expectancy": 83.1951219512195, "unemployment_rate": 3.371, "homicide_rate": 1.62581066709758, "perceived_safety": 68.2, "lgbt_equality_index": 62.0, "gender_equality_index": 0.91}, "Luxembourg": {"Country": "Luxembourg", "Happiness_Score": 7.063, "Democracy_Score": 8.88, "gdp_per_capita_ppp": 150508.218886888, "life_expectancy": 83.309756097561, "unemployment_rate": 5.184, "homicide_rate": 1.5306610542428, "perceived_safety": 66.8, "lgbt_equality_index": 67.0, "gender_equality_index": 0.96}, "Switzerland": {"Country": "Switzerland", "Happiness_Score": 7.018, "Democracy_Score": 9.32, "gdp_per_capita_ppp": 95141.5960943632, "life_expectancy": 84.1560975609756, "unemployment_rate": 4.043, "homicide_rate": 0.597481940544685, "perceived_safety": 72.6, "lgbt_equality_index": 70.0, "gender_equality_index": 0.98}, "New Zealand": {"Country": "New Zealand", "Happiness_Score": 6.995, "Democracy_Score": 9.61, "gdp_per_capita_ppp": 54697.382252318, "life_expectancy": 81.7585365853659, "unemployment_rate": 3.734, "homicide_rate": 1.46149415952832, "perceived_safety": 51.2, "lgbt_equality_index": 80.0, "gender_equality_index": 0.92}, "Mexico": {"Country": "Mexico", "Happiness_Score": 6.972, "Democracy_Score": 5.32, "gdp_per_capita_ppp": 25243.1644887582, "life_expectancy": 75.069, "unemployment_rate": 2.765, "homicide_rate": 24.8589948436701, "perceived_safety": 47.1, "lgbt_equality_index": 71.0, "gender_equality_index": 0.65}, "Ireland": {"Country": "Ireland", "Happiness_Score": 6.928, "Democracy_Score": 9.19, "gdp_per_capita_ppp": 129682.607150517, "life_expectancy": 82.8073170731707, "unemployment_rate": 4.243, "homicide_rate": 0.654270171245596, "perceived_safety": 51.0, "lgbt_equality_index": 70.0, "gender_equality_index": 0.93}, "Belgium": {"Country": "Belgium", "Happiness_Score": 6.926, "Democracy_Score": 7.64, "gdp_per_capita_ppp": 71946.1447190292, "life_expectancy": 82.4, "unemployment_rate": 5.547, "homicide_rate": 1.08030153549307, "perceived_safety": 50.8, "lgbt_equality_index": 78.0, "gender_equality_index": 0.96}, "Australia": {"Country": "Australia", "Happiness_Score": 6.916, "Democracy_Score": 8.85, "gdp_per_capita_ppp": 72272.7092136683, "life_expectancy": 83.0512195121951, "unemployment_rate": 3.668, "homicide_rate": 0.854406035826682, "perceived_safety": 52.5, "lgbt_equality_index": 78.0, "gender_equality_index": 0.94}, "Kosovo": {"Country": "Kosovo", "Happiness_Score": 6.91, "Democracy_Score": null, "gdp_per_capita_ppp": 15804.4065754058, "life_expectancy": 78.033, "unemployment_rate": null, "homicide_rate": 1.89497747704421, "perceived_safety": 58.4, "lgbt_equality_index": 48.0, "gender_equality_index": null}, "Germany": {"Country": "Germany", "Happiness_Score": 6.882, "Democracy_Score": 8.73, "gdp_per_capita_ppp": 71684.0311875583, "life_expectancy": 81.0414634146342, "unemployment_rate": 3.071, "homicide_rate": 0.910722780231795, "perceived_safety": 61.6, "lgbt_equality_index": 80.0, "gender_equality_index": 0.93}, "Slovenia": {"Country": "Slovenia", "Happiness_Score": 6.868, "Democracy_Score": 7.82, "gdp_per_capita_ppp": 56064.0974596742, "life_expectancy": 81.9292682926829, "unemployment_rate": 3.652, "homicide_rate": 0.566466326409227, "perceived_safety": 75.5, "lgbt_equality_index": 65.0, "gender_equality_index": 0.95}, "Austria": {"Country": "Austria", "Happiness_Score": 6.845, "Democracy_Score": 8.28, "gdp_per_capita_ppp": 73544.6567230487, "life_expectancy": 81.7926829268293, "unemployment_rate": 5.264, "homicide_rate": 0.876191031111463, "perceived_safety": 71.5, "lgbt_equality_index": 73.0, "gender_equality_index": 0.95}, "Czech Republic": {"Country": "Czech Republic", "Happiness_Score": 6.821, "Democracy_Score": 8.08, "gdp_per_capita_ppp": 55761.3798291375, "life_expectancy": 79.8268292682927, "unemployment_rate": 2.579, "homicide_rate": 0.767827757917044, "perceived_safety": 73.6, "lgbt_equality_index": 72.0, "gender_equality_index": 0.89}, "United Arab Emirates": {"Country": "United Arab Emirates", "Happiness_Score": 6.821, "Democracy_Score": 3.07, "gdp_per_capita_ppp": 77955.2951760879, "life_expectancy": 82.909, "unemployment_rate": 2.151, "homicide_rate": 0.693218125037315, "perceived_safety": 86.0, "lgbt_equality_index": 11.0, "gender_equality_index": 0.96}, "Saudi Arabia": {"Country": "Saudi Arabia", "Happiness_Score": 6.817, "Democracy_Score": 2.08, "gdp_per_capita_ppp": 71564.800028565, "life_expectancy": 78.732, "unemployment_rate": 4.008, "homicide_rate": 0.935259944754359, "perceived_safety": 76.7, "lgbt_equality_index": 13.0, "gender_equality_index": 0.77}, "United States of America": {"Country": "United States of America", "Happiness_Score": 6.816, "Democracy_Score": 7.85, "gdp_per_capita_ppp": 82304.6204272866, "life_expectancy": 78.3853658536585, "unemployment_rate": 3.638, "homicide_rate": 5.76340794073065, "perceived_safety": 50.8, "lgbt_equality_index": 68.0, "gender_equality_index": 0.8200000000000001}, "Poland": {"Country": "Poland", "Happiness_Score": 6.768, "Democracy_Score": 7.4, "gdp_per_capita_ppp": 48473.0940286419, "life_expectancy": 78.2585365853659, "unemployment_rate": 2.743, "homicide_rate": 0.802314721828908, "perceived_safety": 71.3, "lgbt_equality_index": 51.0, "gender_equality_index": 0.89}, "Canada": {"Country": "Canada", "Happiness_Score": 6.741, "Democracy_Score": 8.69, "gdp_per_capita_ppp": 64219.3173928637, "life_expectancy": 81.6263414634146, "unemployment_rate": 5.415, "homicide_rate": 1.97968887560784, "perceived_safety": 54.4, "lgbt_equality_index": 78.0, "gender_equality_index": 0.93}, "Taiwan": {"Country": "Taiwan", "Happiness_Score": 6.714, "Democracy_Score": 8.78, "gdp_per_capita_ppp": null, "life_expectancy": null, "unemployment_rate": null, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 59.0, "gender_equality_index": null}, "Belize": {"Country": "Belize", "Happiness_Score": 6.711, "Democracy_Score": null, "gdp_per_capita_ppp": 13729.892058721, "life_expectancy": 73.566, "unemployment_rate": 8.278, "homicide_rate": 28.0582917218107, "perceived_safety": 48.2, "lgbt_equality_index": 50.0, "gender_equality_index": 0.55}, "Lithuania": {"Country": "Lithuania", "Happiness_Score": 6.704, "Democracy_Score": 7.59, "gdp_per_capita_ppp": 52348.2468215268, "life_expectancy": 77.290243902439, "unemployment_rate": 6.841, "homicide_rate": 2.62779952622526, "perceived_safety": 66.8, "lgbt_equality_index": 47.0, "gender_equality_index": 0.9}, "United Kingdom": {"Country": "United Kingdom", "Happiness_Score": 6.694, "Democracy_Score": 8.34, "gdp_per_capita_ppp": 59911.3467663209, "life_expectancy": 81.2380975609756, "unemployment_rate": 4.025, "homicide_rate": 1.11868407522333, "perceived_safety": 51.7, "lgbt_equality_index": 68.0, "gender_equality_index": 0.91}, "Serbia": {"Country": "Serbia", "Happiness_Score": 6.691, "Democracy_Score": 6.26, "gdp_per_capita_ppp": 29776.8951752159, "life_expectancy": 76.1414634146341, "unemployment_rate": 8.268, "homicide_rate": 1.31400205013848, "perceived_safety": 63.0, "lgbt_equality_index": 50.0, "gender_equality_index": 0.88}, "Uruguay": {"Country": "Uruguay", "Happiness_Score": 6.635, "Democracy_Score": 8.67, "gdp_per_capita_ppp": 34470.9322201143, "life_expectancy": 78.138, "unemployment_rate": 8.355, "homicide_rate": 11.2453054170348, "perceived_safety": 47.5, "lgbt_equality_index": 87.0, "gender_equality_index": 0.76}, "Brazil": {"Country": "Brazil", "Happiness_Score": 6.634, "Democracy_Score": 6.49, "gdp_per_capita_ppp": 21175.6186988214, "life_expectancy": 75.848, "unemployment_rate": 7.947, "homicide_rate": 19.2752957673079, "perceived_safety": 36.0, "lgbt_equality_index": 75.0, "gender_equality_index": 0.61}, "Kazakhstan": {"Country": "Kazakhstan", "Happiness_Score": 6.633, "Democracy_Score": 3.08, "gdp_per_capita_ppp": 38515.1836009979, "life_expectancy": 74.402, "unemployment_rate": 4.835, "homicide_rate": 2.55058633787163, "perceived_safety": 54.8, "lgbt_equality_index": 22.0, "gender_equality_index": 0.8200000000000001}, "Romania": {"Country": "Romania", "Happiness_Score": 6.629, "Democracy_Score": 5.99, "gdp_per_capita_ppp": 45981.6027785222, "life_expectancy": 76.4048780487805, "unemployment_rate": 5.589, "homicide_rate": 1.10887485110282, "perceived_safety": 67.2, "lgbt_equality_index": 47.0, "gender_equality_index": 0.77}, "France": {"Country": "France", "Happiness_Score": 6.586, "Democracy_Score": 7.99, "gdp_per_capita_ppp": 60838.9416716424, "life_expectancy": 82.8317073170732, "unemployment_rate": 7.335, "homicide_rate": 1.33506280409367, "perceived_safety": 44.2, "lgbt_equality_index": 74.0, "gender_equality_index": 0.92}, "Singapore": {"Country": "Singapore", "Happiness_Score": 6.585, "Democracy_Score": 6.18, "gdp_per_capita_ppp": 143786.136293013, "life_expectancy": 83.0975609756098, "unemployment_rate": 3.444, "homicide_rate": 0.0690954942050905, "perceived_safety": 77.5, "lgbt_equality_index": 44.0, "gender_equality_index": 0.96}, "El Salvador": {"Country": "El Salvador", "Happiness_Score": 6.578, "Democracy_Score": 4.61, "gdp_per_capita_ppp": 12679.5768752061, "life_expectancy": 72.099, "unemployment_rate": 2.992, "homicide_rate": 7.89768799960639, "perceived_safety": 43.6, "lgbt_equality_index": 41.0, "gender_equality_index": 0.63}, "Italy": {"Country": "Italy", "Happiness_Score": 6.574, "Democracy_Score": 7.58, "gdp_per_capita_ppp": 60029.871712398, "life_expectancy": 83.3512195121951, "unemployment_rate": 7.627, "homicide_rate": 0.568072449338316, "perceived_safety": 52.7, "lgbt_equality_index": 66.0, "gender_equality_index": 0.94}, "Panama": {"Country": "Panama", "Happiness_Score": 6.547, "Democracy_Score": 6.84, "gdp_per_capita_ppp": 39813.3857939972, "life_expectancy": 79.594, "unemployment_rate": 6.544, "homicide_rate": 11.7072934419645, "perceived_safety": 57.2, "lgbt_equality_index": 39.0, "gender_equality_index": 0.61}, "Kuwait": {"Country": "Kuwait", "Happiness_Score": 6.543, "Democracy_Score": 2.78, "gdp_per_capita_ppp": 53025.4710858063, "life_expectancy": 83.1878048780488, "unemployment_rate": 2.08, "homicide_rate": 0.249991818449578, "perceived_safety": 67.4, "lgbt_equality_index": 6.0, "gender_equality_index": 0.8}, "Spain": {"Country": "Spain", "Happiness_Score": 6.54, "Democracy_Score": 8.13, "gdp_per_capita_ppp": 55682.2402603093, "life_expectancy": 83.9341463414634, "unemployment_rate": 12.179, "homicide_rate": 0.690855954769765, "perceived_safety": 62.4, "lgbt_equality_index": 83.0, "gender_equality_index": 0.94}, "Guatemala": {"Country": "Guatemala", "Happiness_Score": 6.533, "Democracy_Score": 4.55, "gdp_per_capita_ppp": 13745.3631241794, "life_expectancy": 72.602, "unemployment_rate": 2.344, "homicide_rate": 23.3657267272051, "perceived_safety": 42.7, "lgbt_equality_index": 35.0, "gender_equality_index": 0.53}, "Malta": {"Country": "Malta", "Happiness_Score": 6.436, "Democracy_Score": 7.93, "gdp_per_capita_ppp": 67057.2184329891, "life_expectancy": 83.3560975609756, "unemployment_rate": 3.479, "homicide_rate": 0.562898250512237, "perceived_safety": 57.0, "lgbt_equality_index": 80.0, "gender_equality_index": 0.88}, "Argentina": {"Country": "Argentina", "Happiness_Score": 6.43, "Democracy_Score": 6.51, "gdp_per_capita_ppp": 30221.4976888753, "life_expectancy": 77.395, "unemployment_rate": 6.139, "homicide_rate": 4.49291137824536, "perceived_safety": 36.8, "lgbt_equality_index": 74.0, "gender_equality_index": 0.71}, "Vietnam": {"Country": "Vietnam", "Happiness_Score": 6.428, "Democracy_Score": 2.62, "gdp_per_capita_ppp": 15033.8768594355, "life_expectancy": 74.588, "unemployment_rate": 1.645, "homicide_rate": 1.53501286347562, "perceived_safety": 59.9, "lgbt_equality_index": 51.0, "gender_equality_index": 0.62}, "Estonia": {"Country": "Estonia", "Happiness_Score": 6.41, "Democracy_Score": 8.13, "gdp_per_capita_ppp": 48637.1802208795, "life_expectancy": 78.7926829268293, "unemployment_rate": 6.378, "homicide_rate": 1.53599045052794, "perceived_safety": 76.8, "lgbt_equality_index": 58.0, "gender_equality_index": 0.91}, "Bosnia and Hercegovina": {"Country": "Bosnia and Hercegovina", "Happiness_Score": 6.381, "Democracy_Score": 5.06, "gdp_per_capita_ppp": 23376.2227477141, "life_expectancy": 77.85, "unemployment_rate": 10.668, "homicide_rate": 1.22446173133237, "perceived_safety": 58.7, "lgbt_equality_index": 50.0, "gender_equality_index": 0.85}, "Latvia": {"Country": "Latvia", "Happiness_Score": 6.365, "Democracy_Score": 7.66, "gdp_per_capita_ppp": 42576.4060799457, "life_expectancy": 75.4268292682927, "unemployment_rate": 6.465, "homicide_rate": 2.49681788529087, "perceived_safety": 63.7, "lgbt_equality_index": 46.0, "gender_equality_index": 0.86}, "Jamaica": {"Country": "Jamaica", "Happiness_Score": 6.305, "Democracy_Score": 6.74, "gdp_per_capita_ppp": 12650.9052955938, "life_expectancy": 71.479, "unemployment_rate": 3.022, "homicide_rate": 49.4403451527686, "perceived_safety": 32.6, "lgbt_equality_index": 21.0, "gender_equality_index": 0.65}, "Chile": {"Country": "Chile", "Happiness_Score": 6.302, "Democracy_Score": 7.83, "gdp_per_capita_ppp": 33145.403552025, "life_expectancy": 81.167, "unemployment_rate": 9.013, "homicide_rate": 6.34829073035101, "perceived_safety": 39.3, "lgbt_equality_index": 80.0, "gender_equality_index": 0.81}, "Nicaragua": {"Country": "Nicaragua", "Happiness_Score": 6.301, "Democracy_Score": 2.09, "gdp_per_capita_ppp": 8319.97944140996, "life_expectancy": 74.947, "unemployment_rate": 4.698, "homicide_rate": 11.3473196321723, "perceived_safety": 49.2, "lgbt_equality_index": 45.0, "gender_equality_index": 0.6}, "Thailand": {"Country": "Thailand", "Happiness_Score": 6.296, "Democracy_Score": 6.27, "gdp_per_capita_ppp": 23519.2120979823, "life_expectancy": 76.412, "unemployment_rate": 0.733, "homicide_rate": 4.79225300638159, "perceived_safety": 63.4, "lgbt_equality_index": 65.0, "gender_equality_index": 0.69}, "Uzbekistan": {"Country": "Uzbekistan", "Happiness_Score": 6.283, "Democracy_Score": 2.1, "gdp_per_capita_ppp": 11106.9715934767, "life_expectancy": 72.388, "unemployment_rate": 4.434, "homicide_rate": 1.39879762685076, "perceived_safety": 73.8, "lgbt_equality_index": 20.0, "gender_equality_index": 0.76}, "Slovakia": {"Country": "Slovakia", "Happiness_Score": 6.255, "Democracy_Score": 7.21, "gdp_per_capita_ppp": 45973.9406902991, "life_expectancy": 78.119512195122, "unemployment_rate": 5.843, "homicide_rate": 1.12358440823663, "perceived_safety": 68.9, "lgbt_equality_index": 49.0, "gender_equality_index": 0.8200000000000001}, "Bahrain": {"Country": "Bahrain", "Happiness_Score": 6.254, "Democracy_Score": 2.45, "gdp_per_capita_ppp": 64171.0857359052, "life_expectancy": 81.284, "unemployment_rate": 1.049, "homicide_rate": 0.195636140255462, "perceived_safety": 77.7, "lgbt_equality_index": 37.0, "gender_equality_index": 0.8200000000000001}, "Philippines": {"Country": "Philippines", "Happiness_Score": 6.206, "Democracy_Score": 6.63, "gdp_per_capita_ppp": 10985.8292627505, "life_expectancy": 69.833, "unemployment_rate": 2.2, "homicide_rate": 4.34759149828352, "perceived_safety": 56.5, "lgbt_equality_index": 54.0, "gender_equality_index": 0.61}, "Paraguay": {"Country": "Paraguay", "Happiness_Score": 6.198, "Democracy_Score": 5.92, "gdp_per_capita_ppp": 17564.4912369374, "life_expectancy": 73.844, "unemployment_rate": 5.794, "homicide_rate": 6.7795163925492, "perceived_safety": 40.5, "lgbt_equality_index": 34.0, "gender_equality_index": 0.5700000000000001}, "Oman": {"Country": "Oman", "Happiness_Score": 6.197, "Democracy_Score": 3.05, "gdp_per_capita_ppp": 41945.0255640883, "life_expectancy": 80.031, "unemployment_rate": 3.176, "homicide_rate": 0.138633928990513, "perceived_safety": 81.6, "lgbt_equality_index": 3.0, "gender_equality_index": 0.73}, "Ecuador": {"Country": "Ecuador", "Happiness_Score": 6.144, "Democracy_Score": 5.24, "gdp_per_capita_ppp": 15918.5162948773, "life_expectancy": 77.392, "unemployment_rate": 3.51, "homicide_rate": 45.7228145164847, "perceived_safety": 38.1, "lgbt_equality_index": 65.0, "gender_equality_index": 0.63}, "Montenegro": {"Country": "Montenegro", "Happiness_Score": 6.139, "Democracy_Score": 6.73, "gdp_per_capita_ppp": 31862.7715778041, "life_expectancy": 77.5878048780488, "unemployment_rate": 13.146, "homicide_rate": 0.789201202111271, "perceived_safety": 65.6, "lgbt_equality_index": 55.0, "gender_equality_index": 0.89}, "Japan": {"Country": "Japan", "Happiness_Score": 6.13, "Democracy_Score": 8.48, "gdp_per_capita_ppp": 50661.7663463109, "life_expectancy": 84.0412195121951, "unemployment_rate": 2.6, "homicide_rate": 0.229153196964695, "perceived_safety": 77.2, "lgbt_equality_index": 53.0, "gender_equality_index": 0.92}, "Cyprus": {"Country": "Cyprus", "Happiness_Score": 6.126, "Democracy_Score": 7.38, "gdp_per_capita_ppp": 59874.5703125, "life_expectancy": 81.648, "unemployment_rate": 5.835, "homicide_rate": 0.81785876397005, "perceived_safety": 66.7, "lgbt_equality_index": 58.0, "gender_equality_index": 0.75}, "Honduras": {"Country": "Honduras", "Happiness_Score": 6.096, "Democracy_Score": 4.98, "gdp_per_capita_ppp": 7178.33906781522, "life_expectancy": 72.884, "unemployment_rate": 6.07, "homicide_rate": 31.4424316507577, "perceived_safety": 28.1, "lgbt_equality_index": 46.0, "gender_equality_index": 0.5900000000000001}, "Dominican Republic": {"Country": "Dominican Republic", "Happiness_Score": 6.093, "Democracy_Score": 6.62, "gdp_per_capita_ppp": 25839.9356687607, "life_expectancy": 73.72, "unemployment_rate": 5.555, "homicide_rate": 10.9166976980638, "perceived_safety": 40.0, "lgbt_equality_index": 38.0, "gender_equality_index": 0.5700000000000001}, "China": {"Country": "China", "Happiness_Score": 6.074, "Democracy_Score": 2.11, "gdp_per_capita_ppp": 25179.1193066383, "life_expectancy": 77.953, "unemployment_rate": 4.67, "homicide_rate": 0.5018560705357, "perceived_safety": 76.9, "lgbt_equality_index": 52.0, "gender_equality_index": 0.81}, "Kyrgyz Republic": {"Country": "Kyrgyz Republic", "Happiness_Score": 6.049, "Democracy_Score": 3.52, "gdp_per_capita_ppp": 7298.08612561933, "life_expectancy": 72.2487804878049, "unemployment_rate": 3.498, "homicide_rate": 1.74734308054439, "perceived_safety": 48.6, "lgbt_equality_index": 22.0, "gender_equality_index": 0.65}, "South Korea": {"Country": "South Korea", "Happiness_Score": 6.04, "Democracy_Score": 7.75, "gdp_per_capita_ppp": 57429.8031076402, "life_expectancy": 83.4292682926829, "unemployment_rate": 2.675, "homicide_rate": 0.477306316584835, "perceived_safety": 71.0, "lgbt_equality_index": 46.0, "gender_equality_index": 0.94}, "Colombia": {"Country": "Colombia", "Happiness_Score": 6.04, "Democracy_Score": 6.35, "gdp_per_capita_ppp": 21246.3762695201, "life_expectancy": 77.725, "unemployment_rate": 9.591, "homicide_rate": 24.9134420347488, "perceived_safety": 38.7, "lgbt_equality_index": 71.0, "gender_equality_index": 0.61}, "Portugal": {"Country": "Portugal", "Happiness_Score": 6.029, "Democracy_Score": 8.08, "gdp_per_capita_ppp": 49352.8388613032, "life_expectancy": 82.3292682926829, "unemployment_rate": 6.498, "homicide_rate": 0.719971949892832, "perceived_safety": 67.0, "lgbt_equality_index": 77.0, "gender_equality_index": 0.92}, "Croatia": {"Country": "Croatia", "Happiness_Score": 6.009, "Democracy_Score": 6.5, "gdp_per_capita_ppp": 47759.6982995339, "life_expectancy": 78.4731707317073, "unemployment_rate": 6.121, "homicide_rate": 0.667347104040825, "perceived_safety": 75.7, "lgbt_equality_index": 57.0, "gender_equality_index": 0.91}, "Malaysia": {"Country": "Malaysia", "Happiness_Score": 6.005, "Democracy_Score": 7.11, "gdp_per_capita_ppp": 36466.8914938333, "life_expectancy": 76.657, "unemployment_rate": 3.858, "homicide_rate": 0.734492430713877, "perceived_safety": 52.0, "lgbt_equality_index": 18.0, "gender_equality_index": 0.8}, "Peru": {"Country": "Peru", "Happiness_Score": 5.974, "Democracy_Score": 5.69, "gdp_per_capita_ppp": 17011.2278028825, "life_expectancy": 77.74, "unemployment_rate": 4.899, "homicide_rate": 8.60480803979216, "perceived_safety": 33.1, "lgbt_equality_index": 54.0, "gender_equality_index": 0.64}, "Mauritius": {"Country": "Mauritius", "Happiness_Score": 5.939, "Democracy_Score": 8.23, "gdp_per_capita_ppp": 29560.7137230079, "life_expectancy": 73.4121951219512, "unemployment_rate": 5.571, "homicide_rate": 2.27249663925174, "perceived_safety": 49.8, "lgbt_equality_index": 51.0, "gender_equality_index": 0.63}, "Hungary": {"Country": "Hungary", "Happiness_Score": 5.937, "Democracy_Score": 6.51, "gdp_per_capita_ppp": 46592.3856070073, "life_expectancy": 76.5707317073171, "unemployment_rate": 4.096, "homicide_rate": 0.722657964901225, "perceived_safety": 66.5, "lgbt_equality_index": 49.0, "gender_equality_index": 0.77}, "Mongolia": {"Country": "Mongolia", "Happiness_Score": 5.936, "Democracy_Score": 6.53, "gdp_per_capita_ppp": 18004.8512058355, "life_expectancy": 72.1224390243902, "unemployment_rate": 5.178, "homicide_rate": 5.91503475082916, "perceived_safety": 49.7, "lgbt_equality_index": 40.0, "gender_equality_index": 0.7}, "Trinidad and Tobago": {"Country": "Trinidad and Tobago", "Happiness_Score": 5.905, "Democracy_Score": 7.09, "gdp_per_capita_ppp": 34623.3691500959, "life_expectancy": 73.49, "unemployment_rate": 3.361, "homicide_rate": 40.4432986623964, "perceived_safety": 28.8, "lgbt_equality_index": 26.0, "gender_equality_index": 0.74}, "Moldova": {"Country": "Moldova", "Happiness_Score": 5.851, "Democracy_Score": 6.04, "gdp_per_capita_ppp": 17746.9405538684, "life_expectancy": 71.198, "unemployment_rate": 1.57, "homicide_rate": 2.54314378217647, "perceived_safety": 55.4, "lgbt_equality_index": 36.0, "gender_equality_index": 0.84}, "Bolivia": {"Country": "Bolivia", "Happiness_Score": 5.835, "Democracy_Score": 4.26, "gdp_per_capita_ppp": 12892.1249578777, "life_expectancy": 68.581, "unemployment_rate": 3.024, "homicide_rate": 4.41843313132273, "perceived_safety": 35.8, "lgbt_equality_index": 62.0, "gender_equality_index": 0.5800000000000001}, "Russia": {"Country": "Russia", "Happiness_Score": 5.834, "Democracy_Score": 2.03, "gdp_per_capita_ppp": 44268.73046875, "life_expectancy": 73.2546341463415, "unemployment_rate": 3.076, "homicide_rate": 6.76512531955806, "perceived_safety": 61.8, "lgbt_equality_index": 29.0, "gender_equality_index": 0.8200000000000001}, "Venezuela": {"Country": "Venezuela", "Happiness_Score": 5.756, "Democracy_Score": 2.25, "gdp_per_capita_ppp": null, "life_expectancy": 72.514, "unemployment_rate": 5.407, "homicide_rate": 12.6466448562847, "perceived_safety": null, "lgbt_equality_index": 52.0, "gender_equality_index": 0.48}, "Libya": {"Country": "Libya", "Happiness_Score": 5.731, "Democracy_Score": 2.31, "gdp_per_capita_ppp": 13847.0792190045, "life_expectancy": 69.339, "unemployment_rate": 18.713, "homicide_rate": null, "perceived_safety": 44.2, "lgbt_equality_index": 13.0, "gender_equality_index": 0.73}, "North Macedonia": {"Country": "North Macedonia", "Happiness_Score": 5.719, "Democracy_Score": 6.28, "gdp_per_capita_ppp": 25354.103505762, "life_expectancy": 75.3160975609756, "unemployment_rate": 13.174, "homicide_rate": 1.52854990019388, "perceived_safety": 58.6, "lgbt_equality_index": 49.0, "gender_equality_index": 0.87}, "Algeria": {"Country": "Algeria", "Happiness_Score": 5.714, "Democracy_Score": 3.55, "gdp_per_capita_ppp": 16824.4879034627, "life_expectancy": 76.261, "unemployment_rate": 11.645, "homicide_rate": 1.16107238811947, "perceived_safety": 47.0, "lgbt_equality_index": 13.0, "gender_equality_index": 0.54}, "Bulgaria": {"Country": "Bulgaria", "Happiness_Score": 5.703, "Democracy_Score": 6.34, "gdp_per_capita_ppp": 38829.1913208102, "life_expectancy": 75.7560975609756, "unemployment_rate": 4.319, "homicide_rate": 1.08890737415431, "perceived_safety": 64.5, "lgbt_equality_index": 42.0, "gender_equality_index": 0.79}, "Greece": {"Country": "Greece", "Happiness_Score": 5.697, "Democracy_Score": 8.07, "gdp_per_capita_ppp": 42710.5058010314, "life_expectancy": 81.7365853658537, "unemployment_rate": 11.023, "homicide_rate": 0.839605274224601, "perceived_safety": 53.8, "lgbt_equality_index": 66.0, "gender_equality_index": 0.88}, "Albania": {"Country": "Albania", "Happiness_Score": 5.662, "Democracy_Score": 6.2, "gdp_per_capita_ppp": 24822.3543089995, "life_expectancy": 79.602, "unemployment_rate": 10.669, "homicide_rate": 1.38708340817063, "perceived_safety": 55.9, "lgbt_equality_index": 47.0, "gender_equality_index": 0.88}, "Indonesia": {"Country": "Indonesia", "Happiness_Score": 5.617, "Democracy_Score": 6.44, "gdp_per_capita_ppp": 15415.7079259527, "life_expectancy": 71.146, "unemployment_rate": 3.308, "homicide_rate": 0.303768746039586, "perceived_safety": 53.6, "lgbt_equality_index": 12.0, "gender_equality_index": 0.56}, "Tajikistan": {"Country": "Tajikistan", "Happiness_Score": 5.591, "Democracy_Score": 1.83, "gdp_per_capita_ppp": 4963.58295264504, "life_expectancy": 71.79, "unemployment_rate": 7.037, "homicide_rate": 0.892370798940089, "perceived_safety": null, "lgbt_equality_index": 38.0, "gender_equality_index": 0.73}, "Armenia": {"Country": "Armenia", "Happiness_Score": 5.584, "Democracy_Score": 5.35, "gdp_per_capita_ppp": 21534.030536117, "life_expectancy": 77.4658536585366, "unemployment_rate": 12.405, "homicide_rate": 2.20833575400906, "perceived_safety": 77.9, "lgbt_equality_index": 25.0, "gender_equality_index": 0.8}, "Hong Kong": {"Country": "Hong Kong", "Happiness_Score": 5.569, "Democracy_Score": 5.09, "gdp_per_capita_ppp": 71512.3193551161, "life_expectancy": 85.2473170731707, "unemployment_rate": 2.949, "homicide_rate": 0.376205815214825, "perceived_safety": 78.6, "lgbt_equality_index": null, "gender_equality_index": null}, "Georgia": {"Country": "Georgia", "Happiness_Score": 5.517, "Democracy_Score": 4.7, "gdp_per_capita_ppp": 25071.9677264107, "life_expectancy": 74.496, "unemployment_rate": 11.549, "homicide_rate": 2.02806499553233, "perceived_safety": 73.8, "lgbt_equality_index": 30.0, "gender_equality_index": 0.72}, "Laos": {"Country": "Laos", "Happiness_Score": 5.515, "Democracy_Score": 1.71, "gdp_per_capita_ppp": 9291.78859001138, "life_expectancy": 68.964, "unemployment_rate": 1.186, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 45.0, "gender_equality_index": 0.53}, "Mozambique": {"Country": "Mozambique", "Happiness_Score": 5.336, "Democracy_Score": 3.38, "gdp_per_capita_ppp": 1678.39118243681, "life_expectancy": 63.611, "unemployment_rate": 6.661, "homicide_rate": 3.58999788532633, "perceived_safety": 39.0, "lgbt_equality_index": 51.0, "gender_equality_index": 0.52}, "Turkey": {"Country": "Turkey", "Happiness_Score": 5.3, "Democracy_Score": 4.26, "gdp_per_capita_ppp": 42786.2004948664, "life_expectancy": 77.156, "unemployment_rate": 9.388, "homicide_rate": 3.22789482308636, "perceived_safety": 58.5, "lgbt_equality_index": 32.0, "gender_equality_index": 0.74}, "Iraq": {"Country": "Iraq", "Happiness_Score": 5.212, "Democracy_Score": 2.8, "gdp_per_capita_ppp": 14652.5212399212, "life_expectancy": 72.324, "unemployment_rate": 15.239, "homicide_rate": 9.46375217111484, "perceived_safety": 59.5, "lgbt_equality_index": 13.0, "gender_equality_index": 0.4399999999999999}, "Gabon": {"Country": "Gabon", "Happiness_Score": 5.167, "Democracy_Score": 2.18, "gdp_per_capita_ppp": 20755.665381766, "life_expectancy": 68.337, "unemployment_rate": 20.161, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 25.0, "gender_equality_index": 0.48}, "Iran": {"Country": "Iran", "Happiness_Score": 5.151, "Democracy_Score": 1.96, "gdp_per_capita_ppp": 18917.0914723132, "life_expectancy": 77.654, "unemployment_rate": 8.129, "homicide_rate": 2.37540050451863, "perceived_safety": 49.2, "lgbt_equality_index": 5.0, "gender_equality_index": 0.52}, "Côte d’Ivoire": {"Country": "Côte d’Ivoire", "Happiness_Score": 5.148, "Democracy_Score": 4.22, "gdp_per_capita_ppp": 7237.18170740909, "life_expectancy": 61.944, "unemployment_rate": 2.263, "homicide_rate": null, "perceived_safety": 44.3, "lgbt_equality_index": 23.0, "gender_equality_index": 0.39}, "Nepal": {"Country": "Nepal", "Happiness_Score": 5.147, "Democracy_Score": 4.6, "gdp_per_capita_ppp": 5395.20820077513, "life_expectancy": 70.354, "unemployment_rate": 10.437, "homicide_rate": 2.13004129984372, "perceived_safety": 63.9, "lgbt_equality_index": 69.0, "gender_equality_index": 0.5}, "Cameroon": {"Country": "Cameroon", "Happiness_Score": 5.083, "Democracy_Score": 2.56, "gdp_per_capita_ppp": 5410.76921937642, "life_expectancy": 63.7, "unemployment_rate": 3.607, "homicide_rate": 6.76008919336955, "perceived_safety": 34.3, "lgbt_equality_index": 7.0, "gender_equality_index": 0.4399999999999999}, "South Africa": {"Country": "South Africa", "Happiness_Score": 5.009, "Democracy_Score": 7.16, "gdp_per_capita_ppp": 15199.7329823776, "life_expectancy": 66.139, "unemployment_rate": 32.098, "homicide_rate": 43.7202551331462, "perceived_safety": 25.5, "lgbt_equality_index": 67.0, "gender_equality_index": 0.6}, "Azerbaijan": {"Country": "Azerbaijan", "Happiness_Score": 4.993, "Democracy_Score": 2.8, "gdp_per_capita_ppp": 23651.5994852756, "life_expectancy": 74.429, "unemployment_rate": 5.64, "homicide_rate": 2.16122820563689, "perceived_safety": 68.4, "lgbt_equality_index": 22.0, "gender_equality_index": 0.6699999999999999}, "Niger": {"Country": "Niger", "Happiness_Score": 4.94, "Democracy_Score": 2.26, "gdp_per_capita_ppp": 1875.15306770628, "life_expectancy": 61.183, "unemployment_rate": 0.407, "homicide_rate": 4.41784034939735, "perceived_safety": null, "lgbt_equality_index": 24.0, "gender_equality_index": 0.39}, "Pakistan": {"Country": "Pakistan", "Happiness_Score": 4.868, "Democracy_Score": 2.84, "gdp_per_capita_ppp": 6013.989636386, "life_expectancy": 67.649, "unemployment_rate": 5.237, "homicide_rate": 4.33487075793336, "perceived_safety": 57.6, "lgbt_equality_index": 31.0, "gender_equality_index": 0.48}, "Tunisia": {"Country": "Tunisia", "Happiness_Score": 4.798, "Democracy_Score": 4.71, "gdp_per_capita_ppp": 14040.5961148142, "life_expectancy": 76.508, "unemployment_rate": 15.106, "homicide_rate": 4.69348024650292, "perceived_safety": 55.1, "lgbt_equality_index": 14.0, "gender_equality_index": 0.76}, "Nigeria": {"Country": "Nigeria", "Happiness_Score": 4.788, "Democracy_Score": 4.16, "gdp_per_capita_ppp": 8705.43426693539, "life_expectancy": 54.462, "unemployment_rate": 3.074, "homicide_rate": 15.7466808233499, "perceived_safety": 33.8, "lgbt_equality_index": 11.0, "gender_equality_index": 0.3199999999999999}, "Senegal": {"Country": "Senegal", "Happiness_Score": 4.787, "Democracy_Score": 5.93, "gdp_per_capita_ppp": 4777.61451861578, "life_expectancy": 68.683, "unemployment_rate": 2.784, "homicide_rate": 0.267518151792543, "perceived_safety": 54.9, "lgbt_equality_index": 4.0, "gender_equality_index": 0.49}, "Namibia": {"Country": "Namibia", "Happiness_Score": 4.781, "Democracy_Score": 6.48, "gdp_per_capita_ppp": 11251.2370313819, "life_expectancy": 67.385, "unemployment_rate": 19.154, "homicide_rate": 11.2077806904171, "perceived_safety": 36.2, "lgbt_equality_index": 41.0, "gender_equality_index": 0.55}, "Palestine": {"Country": "Palestine", "Happiness_Score": 4.694, "Democracy_Score": 3.44, "gdp_per_capita_ppp": 5950.02006184393, "life_expectancy": 65.17, "unemployment_rate": null, "homicide_rate": 0.622023007311598, "perceived_safety": 57.0, "lgbt_equality_index": 18.0, "gender_equality_index": null}, "Kenya": {"Country": "Kenya", "Happiness_Score": 4.674, "Democracy_Score": 5.05, "gdp_per_capita_ppp": 6317.03904665091, "life_expectancy": 63.646, "unemployment_rate": 5.409, "homicide_rate": 4.87166844718499, "perceived_safety": 44.9, "lgbt_equality_index": 21.0, "gender_equality_index": 0.47}, "Ukraine": {"Country": "Ukraine", "Happiness_Score": 4.658, "Democracy_Score": 4.9, "gdp_per_capita_ppp": 17665.34375, "life_expectancy": 73.422, "unemployment_rate": null, "homicide_rate": 3.77663964401616, "perceived_safety": 53.1, "lgbt_equality_index": 48.0, "gender_equality_index": 0.81}, "Morocco": {"Country": "Morocco", "Happiness_Score": 4.646, "Democracy_Score": 4.97, "gdp_per_capita_ppp": 9894.650390625, "life_expectancy": 75.313, "unemployment_rate": 8.896, "homicide_rate": 1.70500474577332, "perceived_safety": 53.0, "lgbt_equality_index": 13.0, "gender_equality_index": 0.56}, "Guinea": {"Country": "Guinea", "Happiness_Score": 4.609, "Democracy_Score": 2.04, "gdp_per_capita_ppp": 4333.74617312626, "life_expectancy": 60.74, "unemployment_rate": 5.141, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 14.0, "gender_equality_index": 0.39}, "Mali": {"Country": "Mali", "Happiness_Score": 4.588, "Democracy_Score": 2.4, "gdp_per_capita_ppp": 3174.62960276396, "life_expectancy": 60.439, "unemployment_rate": 2.947, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 8.0, "gender_equality_index": 0.39}, "Ghana": {"Country": "Ghana", "Happiness_Score": 4.554, "Democracy_Score": 6.24, "gdp_per_capita_ppp": 7556.41605453234, "life_expectancy": 65.498, "unemployment_rate": 2.829, "homicide_rate": 1.83111773115644, "perceived_safety": 59.8, "lgbt_equality_index": 15.0, "gender_equality_index": 0.49}, "India": {"Country": "India", "Happiness_Score": 4.536, "Democracy_Score": 7.29, "gdp_per_capita_ppp": 10323.4998734428, "life_expectancy": 72.003, "unemployment_rate": 4.172, "homicide_rate": 2.81530423021647, "perceived_safety": 55.8, "lgbt_equality_index": 51.0, "gender_equality_index": 0.56}, "Somalia": {"Country": "Somalia", "Happiness_Score": 4.508, "Democracy_Score": null, "gdp_per_capita_ppp": 1555.61016798776, "life_expectancy": 58.816, "unemployment_rate": 18.96, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 0.0, "gender_equality_index": null}, "Uganda": {"Country": "Uganda", "Happiness_Score": 4.491, "Democracy_Score": 4.49, "gdp_per_capita_ppp": 3097.63702430619, "life_expectancy": 68.252, "unemployment_rate": 2.754, "homicide_rate": 8.97308867739149, "perceived_safety": 45.9, "lgbt_equality_index": 9.0, "gender_equality_index": 0.47}, "Jordan": {"Country": "Jordan", "Happiness_Score": 4.478, "Democracy_Score": 3.28, "gdp_per_capita_ppp": 10411.8416152967, "life_expectancy": 77.814, "unemployment_rate": 16.62, "homicide_rate": 0.987830151085125, "perceived_safety": 60.3, "lgbt_equality_index": 17.0, "gender_equality_index": 0.55}, "Mauritania": {"Country": "Mauritania", "Happiness_Score": 4.473, "Democracy_Score": 3.96, "gdp_per_capita_ppp": 6965.90953574715, "life_expectancy": 68.484, "unemployment_rate": 10.37, "homicide_rate": 0.999971522550119, "perceived_safety": null, "lgbt_equality_index": 10.0, "gender_equality_index": 0.4}, "Cambodia": {"Country": "Cambodia", "Happiness_Score": 4.462, "Democracy_Score": 2.94, "gdp_per_capita_ppp": 7430.73085709837, "life_expectancy": 70.668, "unemployment_rate": 0.256, "homicide_rate": 1.82033262639221, "perceived_safety": 50.3, "lgbt_equality_index": 46.0, "gender_equality_index": 0.51}, "Congo (Brazzaville)": {"Country": "Congo (Brazzaville)", "Happiness_Score": 4.456, "Democracy_Score": 2.79, "gdp_per_capita_ppp": 6850.27770621099, "life_expectancy": 65.772, "unemployment_rate": 19.919, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 28.0, "gender_equality_index": null}, "Burkina Faso": {"Country": "Burkina Faso", "Happiness_Score": 4.455, "Democracy_Score": 2.55, "gdp_per_capita_ppp": 2759.30205484605, "life_expectancy": 61.092, "unemployment_rate": 3.601, "homicide_rate": 1.25044051977478, "perceived_safety": null, "lgbt_equality_index": 9.0, "gender_equality_index": 0.42}, "Benin": {"Country": "Benin", "Happiness_Score": 4.393, "Democracy_Score": 4.44, "gdp_per_capita_ppp": 4129.9661200142, "life_expectancy": 60.774, "unemployment_rate": 1.641, "homicide_rate": 1.1274974068, "perceived_safety": null, "lgbt_equality_index": 27.0, "gender_equality_index": 0.35}, "Chad": {"Country": "Chad", "Happiness_Score": 4.385, "Democracy_Score": 1.89, "gdp_per_capita_ppp": 2700.36055335878, "life_expectancy": 55.069, "unemployment_rate": 1.059, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 15.0, "gender_equality_index": 0.3299999999999999}, "Lesotho": {"Country": "Lesotho", "Happiness_Score": 4.375, "Democracy_Score": 6.06, "gdp_per_capita_ppp": 2880.96629615692, "life_expectancy": 57.375, "unemployment_rate": 16.348, "homicide_rate": 38.2397413122181, "perceived_safety": null, "lgbt_equality_index": 44.0, "gender_equality_index": 0.4499999999999999}, "Bangladesh": {"Country": "Bangladesh", "Happiness_Score": 4.319, "Democracy_Score": 4.44, "gdp_per_capita_ppp": 9147.7775066555, "life_expectancy": 74.672, "unemployment_rate": 3.352, "homicide_rate": 2.34217668208578, "perceived_safety": 38.4, "lgbt_equality_index": 25.0, "gender_equality_index": 0.5}, "Gambia": {"Country": "Gambia", "Happiness_Score": 4.306, "Democracy_Score": 4.47, "gdp_per_capita_ppp": 3289.13283057107, "life_expectancy": 65.86, "unemployment_rate": 6.479, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 3.0, "gender_equality_index": 0.41}, "Myanmar": {"Country": "Myanmar", "Happiness_Score": 4.287, "Democracy_Score": 0.96, "gdp_per_capita_ppp": 5953.35735165913, "life_expectancy": 66.889, "unemployment_rate": 2.977, "homicide_rate": 2.57510107248619, "perceived_safety": 48.5, "lgbt_equality_index": 25.0, "gender_equality_index": 0.52}, "Liberia": {"Country": "Liberia", "Happiness_Score": 4.28, "Democracy_Score": 5.57, "gdp_per_capita_ppp": 1794.53340863362, "life_expectancy": 62.163, "unemployment_rate": 2.905, "homicide_rate": 3.08709483452429, "perceived_safety": null, "lgbt_equality_index": 16.0, "gender_equality_index": 0.3399999999999999}, "Togo": {"Country": "Togo", "Happiness_Score": 4.277, "Democracy_Score": 2.99, "gdp_per_capita_ppp": 3154.43329348299, "life_expectancy": 62.74, "unemployment_rate": 1.942, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 9.0, "gender_equality_index": 0.42}, "Madagascar": {"Country": "Madagascar", "Happiness_Score": 4.174, "Democracy_Score": 5.33, "gdp_per_capita_ppp": 1808.44779038579, "life_expectancy": 63.632, "unemployment_rate": 3.044, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 30.0, "gender_equality_index": 0.43}, "Zambia": {"Country": "Zambia", "Happiness_Score": 4.106, "Democracy_Score": 5.73, "gdp_per_capita_ppp": 4076.99508686641, "life_expectancy": 66.349, "unemployment_rate": 5.861, "homicide_rate": 5.20150860823759, "perceived_safety": 53.6, "lgbt_equality_index": 8.0, "gender_equality_index": 0.47}, "Sri Lanka": {"Country": "Sri Lanka", "Happiness_Score": 4.013, "Democracy_Score": 6.19, "gdp_per_capita_ppp": 14455.6544414734, "life_expectancy": 77.483, "unemployment_rate": 4.528, "homicide_rate": 3.31094038448808, "perceived_safety": 57.6, "lgbt_equality_index": 28.0, "gender_equality_index": 0.62}, "Ethiopia": {"Country": "Ethiopia", "Happiness_Score": 3.985, "Democracy_Score": 3.24, "gdp_per_capita_ppp": 3060.9050300376, "life_expectancy": 67.315, "unemployment_rate": 3.375, "homicide_rate": 8.51054794891045, "perceived_safety": 49.6, "lgbt_equality_index": 12.0, "gender_equality_index": 0.51}, "Comoros": {"Country": "Comoros", "Happiness_Score": 3.925, "Democracy_Score": 2.84, "gdp_per_capita_ppp": 3811.65084882413, "life_expectancy": 66.777, "unemployment_rate": 3.833, "homicide_rate": null, "perceived_safety": null, "lgbt_equality_index": 18.0, "gender_equality_index": null}, "Eswatini": {"Country": "Eswatini", "Happiness_Score": 3.909, "Democracy_Score": 2.6, "gdp_per_capita_ppp": 11299.8831236788, "life_expectancy": 64.123, "unemployment_rate": 34.61, "homicide_rate": 12.5145709802017, "perceived_safety": null, "lgbt_equality_index": 27.0, "gender_equality_index": 0.51}, "Tanzania": {"Country": "Tanzania", "Happiness_Score": 3.902, "Democracy_Score": 5.2, "gdp_per_capita_ppp": 4018.5166015625, "life_expectancy": 66.995, "unemployment_rate": 1.565, "homicide_rate": 3.74921291744897, "perceived_safety": 46.5, "lgbt_equality_index": 14.0, "gender_equality_index": 0.49}, "Egypt": {"Country": "Egypt", "Happiness_Score": 3.862, "Democracy_Score": 2.79, "gdp_per_capita_ppp": 18524.8392997937, "life_expectancy": 71.633, "unemployment_rate": 6.753, "homicide_rate": 1.31152527182627, "perceived_safety": 53.6, "lgbt_equality_index": 10.0, "gender_equality_index": 0.61}, "Democratic Republic of Congo": {"Country": "Democratic Republic of Congo", "Happiness_Score": 3.761, "Democracy_Score": 1.92, "gdp_per_capita_ppp": 1730.62228877694, "life_expectancy": 61.895, "unemployment_rate": 4.469, "homicide_rate": null, "perceived_safety": 33.3, "lgbt_equality_index": 22.0, "gender_equality_index": 0.39}, "Lebanon": {"Country": "Lebanon", "Happiness_Score": 3.723, "Democracy_Score": 3.56, "gdp_per_capita_ppp": 12574.8329116403, "life_expectancy": 77.817, "unemployment_rate": 10.985, "homicide_rate": 2.24466989542556, "perceived_safety": 53.1, "lgbt_equality_index": 16.0, "gender_equality_index": 0.63}, "Yemen": {"Country": "Yemen", "Happiness_Score": 3.532, "Democracy_Score": 1.95, "gdp_per_capita_ppp": null, "life_expectancy": 69.295, "unemployment_rate": 16.944, "homicide_rate": 5.80971851623815, "perceived_safety": 38.3, "lgbt_equality_index": 10.0, "gender_equality_index": 0.18}, "Botswana": {"Country": "Botswana", "Happiness_Score": 3.464, "Democracy_Score": 7.63, "gdp_per_capita_ppp": 21012.10319925, "life_expectancy": 69.163, "unemployment_rate": 23.381, "homicide_rate": 11.3681767255945, "perceived_safety": 48.3, "lgbt_equality_index": 56.0, "gender_equality_index": 0.52}, "Zimbabwe": {"Country": "Zimbabwe", "Happiness_Score": 3.346, "Democracy_Score": 2.98, "gdp_per_capita_ppp": 5791.19212877988, "life_expectancy": 62.775, "unemployment_rate": 9.348, "homicide_rate": 6.75833125350771, "perceived_safety": 39.6, "lgbt_equality_index": 12.0, "gender_equality_index": 0.48}, "Malawi": {"Country": "Malawi", "Happiness_Score": 3.284, "Democracy_Score": 5.85, "gdp_per_capita_ppp": 1830.46461287442, "life_expectancy": 67.353, "unemployment_rate": 5.009, "homicide_rate": 1.77598671180007, "perceived_safety": null, "lgbt_equality_index": 8.0, "gender_equality_index": 0.42}, "Sierra Leone": {"Country": "Sierra Leone", "Happiness_Score": 3.251, "Democracy_Score": 4.32, "gdp_per_capita_ppp": 3368.31727188063, "life_expectancy": 61.786, "unemployment_rate": 3.092, "homicide_rate": 2.22431228940123, "perceived_safety": null, "lgbt_equality_index": 13.0, "gender_equality_index": 0.39}, "Afghanistan": {"Country": "Afghanistan", "Happiness_Score": 1.446, "Democracy_Score": 0.25, "gdp_per_capita_ppp": 2201.72290691677, "life_expectancy": 66.035, "unemployment_rate": 14.008, "homicide_rate": 4.0324584656778, "perceived_safety": 25.2, "lgbt_equality_index": 1.0, "gender_equality_index": 0.3299999999999999}};
+const METRICS = {"Happiness_Score": {"label": "Happiness score", "format": ".3f", "palette": ["#edf8fb", "#b3cde3", "#8c96c6", "#8856a7", "#810f7c"]}, "Democracy_Score": {"label": "Democracy score", "format": ".2f", "palette": ["#f7fcf5", "#c7e9c0", "#74c476", "#238b45", "#00441b"]}, "gdp_per_capita_ppp": {"label": "GDP per capita PPP", "format": "$,.0f", "palette": ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#d95f0e"]}, "life_expectancy": {"label": "Life expectancy", "format": ".1f", "palette": ["#f7fbff", "#c6dbef", "#6baed6", "#2171b5", "#08306b"]}, "unemployment_rate": {"label": "Unemployment rate", "format": ".1f%", "palette": ["#ffffcc", "#ffeda0", "#feb24c", "#f03b20", "#bd0026"]}, "homicide_rate": {"label": "Homicide rate", "format": ".2f", "palette": ["#ffffd4", "#fed98e", "#fe9929", "#d95f0e", "#993404"]}, "perceived_safety": {"label": "Perceived safety", "format": ".1f", "palette": ["#d1fae5", "#6ee7b7", "#2dd4bf", "#0ea5e9", "#1e40af"]}, "lgbt_equality_index": {"label": "LGBT equality index", "format": ".1f", "palette": ["#f2f0f7", "#cbc9e2", "#9e9ac8", "#756bb1", "#54278f"]}, "gender_equality_index": {"label": "Gender equality index", "format": ".2f", "palette": ["#fff5f0", "#fcbba1", "#fb6a4a", "#cb181d", "#67000d"]}};
+
+const aliases = {
+  'United States of America':'United States',
+  'Czechia':'Czech Republic',
+  'Republic of Serbia':'Serbia',
+  'Bosnia and Herz.':'Bosnia and Herzegovina',
+  'Dominican Rep.':'Dominican Republic',
+  'North Macedonia':'Macedonia',
+  'S. Korea':'South Korea',
+  'Korea':'South Korea',
+  'Russia':'Russian Federation',
+  'Iran':'Iran',
+  'Vietnam':'Viet Nam',
+  'Laos':'Lao PDR',
+  'Moldova':'Moldova',
+  'Tanzania':'Tanzania',
+  'Bolivia':'Bolivia',
+  'Venezuela':'Venezuela',
+  'Syria':'Syrian Arab Republic'
+};
+
+function rowFor(name) {
+  return DATA[name] || DATA[aliases[name]] || null;
+}
+
+function values(metric) {
+  return Object.values(DATA)
+    .map(d => d[metric])
+    .filter(v => Number.isFinite(v));
+}
+
+function fmt(metric, v) {
+  if (!Number.isFinite(v)) return 'No data';
+
+  const f = METRICS[metric].format;
+
+  if (f === '$,.0f') return '$' + Math.round(v).toLocaleString();
+  if (f === '.1f%') return v.toFixed(1) + '%';
+  if (f === '.3f') return v.toFixed(3);
+  if (f === '.2f') return v.toFixed(2);
+
+  return v.toFixed(1);
+}
+
+function quantiles(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+
+  return [0, .2, .4, .6, .8, 1].map(q =>
+    s[Math.min(s.length - 1, Math.floor(q * (s.length - 1)))]
+  );
+}
+
+function colorFor(metric, v) {
+  if (!Number.isFinite(v)) return '#d7dde7';
+
+  const qs = quantiles(values(metric));
+  const p = METRICS[metric].palette;
+
+  for (let i = 1; i < qs.length; i++) {
+    if (v <= qs[i]) return p[i - 1];
+  }
+
+  return p[p.length - 1];
+}
+
+const map = L.map('map', {
+  zoomControl:false,
+  worldCopyJump:true,
+  minZoom:2
+}).setView([24, 10], 2.25);
+
+L.control.zoom({ position:'bottomright' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OpenStreetMap &copy; CARTO',
+  maxZoom:8
+}).addTo(map);
+
+let layer;
+let currentMetric = 'Happiness_Score';
+
+const select = document.getElementById('metricSelect');
+
+Object.entries(METRICS).forEach(([k, m]) => {
+  const option = document.createElement('option');
+  option.value = k;
+  option.textContent = m.label;
+  select.appendChild(option);
+});
+
+function styleFeature(feature) {
+  const d = rowFor(feature.properties.name);
+  const v = d ? d[currentMetric] : null;
+
+  return {
+    fillColor: colorFor(currentMetric, v),
+    weight: .75,
+    color: '#ffffff',
+    fillOpacity: .88,
+    opacity: .85
+  };
+}
+
+function popupHtml(country, d) {
+  if (!d) {
+    return `<div class="popup-title">${country}</div><p>No matched data in CSV.</p>`;
+  }
+
+  return `
+    <div class="popup-title">${d.Country}</div>
+    <div class="popup-grid">
+      ${Object.entries(METRICS).map(([k, m]) =>
+        `<span>${m.label}</span><span>${fmt(k, d[k])}</span>`
+      ).join('')}
+    </div>
+  `;
+}
+
+function onEachFeature(feature, lyr) {
+  lyr.on({
+    mouseover: e => {
+      e.target.setStyle({
+        weight: 2.2,
+        color: '#172033',
+        fillOpacity: .96
+      });
+
+      e.target.bringToFront();
+    },
+
+    mouseout: e => layer.resetStyle(e.target),
+
+    click: e => {
+      const d = rowFor(feature.properties.name);
+      lyr.bindPopup(popupHtml(feature.properties.name, d)).openPopup();
+    }
+  });
+}
+
+function updatePanels() {
+  const vals = values(currentMetric);
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+
+  const ranked = Object.values(DATA)
+    .filter(d => Number.isFinite(d[currentMetric]))
+    .sort((a, b) => b[currentMetric] - a[currentMetric]);
+
+  document.getElementById('coverage').textContent = vals.length;
+  document.getElementById('avg').textContent = fmt(currentMetric, avg);
+  document.getElementById('top').textContent = fmt(currentMetric, ranked[0][currentMetric]);
+
+  document.getElementById('rankSubtitle').textContent =
+    'Ranked by ' + METRICS[currentMetric].label.toLowerCase();
+
+  document.getElementById('rankList').innerHTML = ranked.slice(0, 15).map((d, i) => `
+    <div class="item">
+      <div class="num">${i + 1}</div>
+      <div class="country">${d.Country}</div>
+      <div class="value">${fmt(currentMetric, d[currentMetric])}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('legendTitle').textContent = METRICS[currentMetric].label;
+
+  document.getElementById('swatches').innerHTML =
+    METRICS[currentMetric].palette.map(c =>
+      `<div style="background:${c}"></div>`
+    ).join('');
+
+  document.getElementById('minLabel').textContent = fmt(currentMetric, Math.min(...vals));
+  document.getElementById('maxLabel').textContent = fmt(currentMetric, Math.max(...vals));
+}
+
+select.addEventListener('change', e => {
+  currentMetric = e.target.value;
+  layer.setStyle(styleFeature);
+  updatePanels();
+});
+
+fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+  .then(r => r.json())
+  .then(geo => {
+    layer = L.geoJSON(geo, {
+      style: styleFeature,
+      onEachFeature
+    }).addTo(map);
+
+    updatePanels();
+  });
+</script>
+</body>
+</html>
